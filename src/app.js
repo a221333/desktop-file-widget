@@ -201,6 +201,7 @@ function showAppMenu(x, y) {
   if (s.ocBuild) {
     items.push('-',
       { label: '用 OneCommander 打开文件夹', checked: s.useOneCommander, action: () => setSetting('useOneCommander', !s.useOneCommander) },
+      { label: '记录从 OneCommander 打开的文件', checked: s.trackOneCommander, action: () => setSetting('trackOneCommander', !s.trackOneCommander) },
       { label: '设置 OneCommander 路径…', sub: s.ocPath ? s.ocPath.split(/[\\/]/).slice(-2).join('\\') : '自动检测', action: pickOneCommander });
   }
   items.push('-',

@@ -39,6 +39,12 @@ struct Bounds {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+struct Tracked {
+    path: String,
+    time: f64, // 毫秒时间戳
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default, rename_all = "camelCase")]
 struct Config {
     favorites: Vec<Favorite>,
@@ -51,6 +57,9 @@ struct Config {
     include_folders: bool,
     use_one_commander: bool,
     oc_path: Option<String>,
+    /// 记录从 OneCommander 打开的文件（OneCommander 不会写入系统“最近”）
+    track_one_commander: bool,
+    tracked_recent: Vec<Tracked>,
 }
 
 impl Default for Config {
@@ -66,9 +75,12 @@ impl Default for Config {
             include_folders: false,
             use_one_commander: IS_OC_BUILD,
             oc_path: None,
+            track_one_commander: IS_OC_BUILD,
+            tracked_recent: vec![],
         }
     }
 }
+
 
 struct AppState {
     cfg: Mutex<Config>,
@@ -292,6 +304,10 @@ struct Item {
 
 fn build_recent(state: &AppState) -> Vec<Item> {
     let mut raw = raw_recent(state);
+    // 合并从 OneCommander 打开并被记录下来的文件
+    for t in state.cfg().tracked_recent.iter() {
+        raw.push(RawRecent { path: t.path.clone(), time: UNIX_EPOCH + Duration::from_millis(t.time as u64) });
+    }
     raw.sort_by(|a, b| b.time.cmp(&a.time));
     let (hidden, pinned, include_folders, max) = {
         let c = state.cfg();
@@ -362,6 +378,7 @@ struct Settings {
     hidden_count: usize,
     oc_build: bool,
     use_one_commander: bool,
+    track_one_commander: bool,
     oc_path: Option<String>,
     version: String,
 }
@@ -377,6 +394,7 @@ fn get_settings(app: AppHandle, state: St) -> Settings {
         hidden_count: c.hidden.len(),
         oc_build: IS_OC_BUILD,
         use_one_commander: c.use_one_commander,
+        track_one_commander: c.track_one_commander,
         oc_path: c.oc_path.clone(),
         version: app.package_info().version.to_string(),
     }
@@ -396,6 +414,7 @@ fn set_setting(app: AppHandle, state: St, key: String, value: Value) -> Result<(
             }
             "includeFolders" => c.include_folders = value.as_bool().unwrap_or(false),
             "useOneCommander" => c.use_one_commander = value.as_bool().unwrap_or(false),
+            "trackOneCommander" => c.track_one_commander = value.as_bool().unwrap_or(false),
             "ocPath" => c.oc_path = value.as_str().filter(|s| !s.is_empty()).map(String::from),
             "autoStart" => {
                 let al = app.autolaunch();
@@ -629,6 +648,7 @@ fn hide_recent(app: AppHandle, state: St, path: String) {
     {
         let mut c = state.cfg();
         c.pinned.retain(|p| !same(p, &path));
+        c.tracked_recent.retain(|t| !same(&t.path, &path));
         c.hidden.push(path);
     }
     state.mark_dirty();
@@ -818,6 +838,14 @@ fn main() {
             }
             tray.build(app)?;
 
+            // 后台：记录从 OneCommander 打开的文件（仅特供版）
+            #[cfg(windows)]
+            if IS_OC_BUILD {
+                let st = state.clone();
+                let handle = app.handle().clone();
+                std::thread::spawn(move || oc_tracker(st, handle));
+            }
+
             // 后台：定时保存配置
             {
                 let st = state.clone();
@@ -887,4 +915,77 @@ fn recent_signature() -> (usize, u128) {
         }
     }
     (n, latest)
+}
+
+// ---------------------------------------------------------------------------
+// OneCommander 打开记录
+// OneCommander 打开文件时不会写入系统“最近”列表（没有调用 SHAddToRecentDocs）。
+// 这里监测由 OneCommander 启动的子进程，从命令行中取出被打开的文件并记录下来。
+// OneCommander 在前台（或刚离开前台 4 秒内）时每 150ms 检查一次，其余时间每 2 秒一次。
+// ---------------------------------------------------------------------------
+#[cfg(windows)]
+fn oc_tracker(state: Arc<AppState>, app: AppHandle) {
+    use std::time::Instant;
+    const SKIP_EXT: [&str; 6] = ["exe", "com", "msi", "dll", "sys", "lnk"];
+
+    let mut seen: HashSet<u32> = win::process_snapshot().into_iter().map(|p| p.pid).collect();
+    let mut oc_pids: HashSet<u32> = HashSet::new();
+    let mut last_active: Option<Instant> = None;
+    let mut last_scan = Instant::now() - Duration::from_secs(10);
+
+    loop {
+        if !state.cfg().track_one_commander {
+            std::thread::sleep(Duration::from_secs(2));
+            continue;
+        }
+        let fg_is_oc = win::foreground_pid().map(|p| oc_pids.contains(&p)).unwrap_or(false);
+        if fg_is_oc {
+            last_active = Some(Instant::now());
+        }
+        let active = last_active.map(|t| t.elapsed() < Duration::from_secs(4)).unwrap_or(false);
+        let interval = if active { Duration::from_millis(150) } else { Duration::from_secs(2) };
+
+        if active || last_scan.elapsed() >= Duration::from_secs(2) {
+            last_scan = Instant::now();
+            let procs = win::process_snapshot();
+            oc_pids = procs.iter().filter(|p| p.exe == "onecommander.exe").map(|p| p.pid).collect();
+            let mut found: Vec<String> = vec![];
+            for p in &procs {
+                if !seen.insert(p.pid) || !oc_pids.contains(&p.ppid) {
+                    continue;
+                }
+                let Some(cmd) = win::process_command_line(p.pid) else { continue };
+                for arg in win::split_command_line(&cmd).into_iter().skip(1) {
+                    let arg = arg.trim().trim_matches('"').to_string();
+                    if arg.len() < 4 || !(arg.contains(":\\") || arg.starts_with("\\\\")) {
+                        continue;
+                    }
+                    let path = Path::new(&arg);
+                    if !path.is_file() || SKIP_EXT.contains(&ext_of(&arg).as_str()) {
+                        continue;
+                    }
+                    found.push(arg);
+                }
+            }
+            // 清理已退出的进程
+            let alive: HashSet<u32> = procs.iter().map(|p| p.pid).collect();
+            seen.retain(|pid| alive.contains(pid));
+
+            if !found.is_empty() {
+                let now = ms(SystemTime::now());
+                {
+                    let mut c = state.cfg();
+                    for f in found {
+                        c.tracked_recent.retain(|t| !same(&t.path, &f));
+                        c.hidden.retain(|h| !same(h, &f)); // 重新打开过的文件不再隐藏
+                        c.tracked_recent.insert(0, Tracked { path: f, time: now });
+                    }
+                    c.tracked_recent.truncate(200);
+                }
+                state.mark_dirty();
+                emit(&app, "recent-changed");
+            }
+        }
+        std::thread::sleep(interval);
+    }
 }

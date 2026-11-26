@@ -35,6 +35,7 @@ Windows hides your recent files behind Explorer's *Quick access* or each app's o
 - **⭐ Pin what matters:** right-click to pin a recent file to the top so it never scrolls away, or remove things you don't want to see.
 - **📁 Favorites card:** drag files or folders straight from Explorer, drag tiles to reorder, rename how they're displayed, and spot moved or deleted paths at a glance.
 - **🧭 OneCommander edition:** a dedicated build that opens folders and *Show in folder* in [OneCommander](https://onecommander.com/) instead of Explorer. It finds OneCommander automatically (Store, portable, PATH, or the running process).
+- **📝 Tracks files opened in OneCommander (OC edition):** OneCommander doesn't write to the Windows *Recent* list, so the OC edition watches the apps it starts and adds the files they open to *Recent files*. You can turn this off in the **⋯** menu.
 - **🎨 Looks at home on Windows 11:** frameless translucent cards, three opacity levels, and Chinese-friendly *middle* ellipsis for long file names (`2026春营...台账.xlsx`).
 - **🧩 Stays out of the way:** no taskbar button, lives in the tray, remembers its position and size, with optional always-on-top and start-with-Windows.
 - **🔒 Private by design:** works fully offline with no telemetry. Settings are a single local JSON file.
@@ -92,6 +93,7 @@ Windows 的"最近文件"藏在资源管理器的「快速访问」或各个软�
 - **⭐ 收藏置顶**：右键可以把重要文件固定在最前面，不会被新打开的文件挤下去；不想看到的也能从列表里移除。
 - **📁 常用文件与文件夹**：从资源管理器直接拖进卡片就能收藏，拖动可以排序，还能改显示名称；文件被移动或删除后会变灰提示。
 - **🧭 OneCommander 特供版**：文件夹和「定位文件」用 [OneCommander](https://onecommander.com/) 打开，不再弹出资源管理器。会自动查找 OneCommander（商店版、便携版、PATH、正在运行的程序），找不到时会提示你手动选择。
+- **📝 记录 OneCommander 中打开的文件（特供版）**：OneCommander 打开文件时不会写入系统「最近」列表，特供版会监测由它启动的程序，把打开的文件加入「最近打开的文件」。可在 **⋯** 菜单中关闭。
 - **🎨 和 Windows 11 风格一致**：无边框半透明卡片，背景不透明度有三档可调；长文件名在中间省略，开头和扩展名都看得到（`2026春营...台账.xlsx`）。
 - **🧩 不打扰**：不占任务栏，常驻托盘；记住窗口位置和大小；可以设置始终置顶和开机自启。
 - **🔒 注重隐私**：完全离线运行，不收集任何数据，所有设置只保存在本地一个 JSON 文件里。

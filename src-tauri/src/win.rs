@@ -239,3 +239,112 @@ pub fn find_one_commander() -> Option<String> {
 pub fn launch(exe: &str, arg: &str) -> std::io::Result<()> {
     Command::new(exe).arg(arg).spawn().map(|_| ())
 }
+
+// ---------------------------------------------------------------------------
+// 进程监测：记录从 OneCommander 打开的文件
+// OneCommander 打开文件时不会调用 SHAddToRecentDocs，系统“最近”里没有记录。
+// 这里检测由 OneCommander 启动的子进程，从其命令行中提取被打开的文件路径。
+// ---------------------------------------------------------------------------
+
+pub struct ProcInfo {
+    pub pid: u32,
+    pub ppid: u32,
+    pub exe: String, // 小写文件名，如 onecommander.exe
+}
+
+/// 枚举当前所有进程
+pub fn process_snapshot() -> Vec<ProcInfo> {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+    };
+    let mut out = Vec::new();
+    unsafe {
+        let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else { return out };
+        let mut e = PROCESSENTRY32W { dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
+        if Process32FirstW(snap, &mut e).is_ok() {
+            loop {
+                let len = e.szExeFile.iter().position(|&c| c == 0).unwrap_or(e.szExeFile.len());
+                out.push(ProcInfo {
+                    pid: e.th32ProcessID,
+                    ppid: e.th32ParentProcessID,
+                    exe: String::from_utf16_lossy(&e.szExeFile[..len]).to_lowercase(),
+                });
+                if Process32NextW(snap, &mut e).is_err() {
+                    break;
+                }
+            }
+        }
+        let _ = CloseHandle(snap);
+    }
+    out
+}
+
+/// 当前前台窗口所属进程
+pub fn foreground_pid() -> Option<u32> {
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_invalid() {
+            return None;
+        }
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        (pid != 0).then_some(pid)
+    }
+}
+
+/// 读取进程命令行（Windows 8.1+，同一用户的进程无需管理员权限）
+pub fn process_command_line(pid: u32) -> Option<String> {
+    use windows::Wdk::System::Threading::{NtQueryInformationProcess, PROCESSINFOCLASS};
+    use windows::Win32::Foundation::{CloseHandle, UNICODE_STRING};
+    use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    const PROCESS_COMMAND_LINE_INFORMATION: PROCESSINFOCLASS = PROCESSINFOCLASS(60);
+    unsafe {
+        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+        let mut need = 0u32;
+        let _ = NtQueryInformationProcess(h, PROCESS_COMMAND_LINE_INFORMATION, std::ptr::null_mut(), 0, &mut need);
+        let mut result = None;
+        if need > 0 && need < 1 << 20 {
+            // 使用 u64 缓冲区保证 UNICODE_STRING 的对齐
+            let mut buf = vec![0u64; (need as usize + 7) / 8];
+            let st = NtQueryInformationProcess(
+                h,
+                PROCESS_COMMAND_LINE_INFORMATION,
+                buf.as_mut_ptr() as *mut c_void,
+                (buf.len() * 8) as u32,
+                &mut need,
+            );
+            if st.is_ok() {
+                let us = &*(buf.as_ptr() as *const UNICODE_STRING);
+                if !us.Buffer.is_null() && us.Length > 0 {
+                    let s = std::slice::from_raw_parts(us.Buffer.0, (us.Length / 2) as usize);
+                    result = Some(String::from_utf16_lossy(s));
+                }
+            }
+        }
+        let _ = CloseHandle(h);
+        result
+    }
+}
+
+/// 按 Windows 规则拆分命令行参数
+pub fn split_command_line(cmd: &str) -> Vec<String> {
+    use windows::Win32::Foundation::{LocalFree, HLOCAL};
+    use windows::Win32::UI::Shell::CommandLineToArgvW;
+    let mut out = Vec::new();
+    unsafe {
+        let mut argc = 0i32;
+        let argv = CommandLineToArgvW(&HSTRING::from(cmd), &mut argc);
+        if argv.is_null() {
+            return out;
+        }
+        for i in 0..argc as usize {
+            if let Ok(s) = (*argv.add(i)).to_string() {
+                out.push(s);
+            }
+        }
+        let _ = LocalFree(Some(HLOCAL(argv as *mut c_void)));
+    }
+    out
+}

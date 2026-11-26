@@ -1,6 +1,6 @@
 [package]
 name = "desktop-file-widget"
-version = "1.1.0"
+version = "1.2.0"
 description = "桌面文件小组件：最近打开的文件 + 常用文件与文件夹"
 authors = ["a221333"]
 edition = "2021"
@@ -29,6 +29,9 @@ windows = { version = "0.61", features = [
   "Win32_UI_WindowsAndMessaging",
   "Win32_Graphics_Gdi",
   "Win32_Storage_FileSystem",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_Threading",
+  "Wdk_System_Threading",
 ] }
 
 [features]
