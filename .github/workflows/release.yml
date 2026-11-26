@@ -19,24 +19,62 @@ jobs:
           node-version: 22
           cache: npm
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - run: npm ci
 
-      - name: Build portable exe + installer + zip
-        run: npx electron-builder --win portable nsis zip --x64 --publish never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          "v=$v" >> $env:GITHUB_OUTPUT
+          New-Item -ItemType Directory -Force release | Out-Null
+
+      # ---------- 普通版 ----------
+      - name: Build standard
+        run: npx tauri build
+
+      - name: Collect standard
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.v }}"
+          Copy-Item src-tauri/target/release/desktop-file-widget.exe "release/DesktopFileWidget-$v-portable.exe"
+          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1 | Copy-Item -Destination "release/DesktopFileWidget-$v-setup.exe"
+          Remove-Item -Recurse -Force src-tauri/target/release/bundle
+
+      # ---------- OneCommander 特供版 ----------
+      - name: Build OneCommander edition
+        run: npx tauri build --features onecommander --config src-tauri/tauri.onecommander.conf.json
+
+      - name: Collect OneCommander edition
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.v }}"
+          Copy-Item src-tauri/target/release/desktop-file-widget.exe "release/DesktopFileWidget-OneCommander-$v-portable.exe"
+          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1 | Copy-Item -Destination "release/DesktopFileWidget-OneCommander-$v-setup.exe"
+          Get-ChildItem release | Format-Table Name, Length
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
-          name: 桌面文件小组件 ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.ver.outputs.v) }}
+          name: 桌面文件小组件 ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.ver.outputs.v) }}
           body: |
-            - **DesktopFileWidget-*-portable.exe**：便携版，下载后双击运行（推荐）
-            - **DesktopFileWidget-*-setup.exe**：安装版，带开始菜单/桌面快捷方式
-            - **\*-win.zip**：免安装压缩包，解压后运行 `桌面文件小组件.exe`
+            ## 两个版本
 
-            > 未签名，首次运行若出现 SmartScreen 提示，点「更多信息 → 仍要运行」。
-          files: |
-            dist/*.exe
-            dist/*.zip
+            | 文件 | 说明 |
+            |---|---|
+            | `DesktopFileWidget-*-portable.exe` | **普通版**便携 exe，双击即用 |
+            | `DesktopFileWidget-*-setup.exe` | 普通版安装包 |
+            | `DesktopFileWidget-OneCommander-*-portable.exe` | **OneCommander 特供版**便携 exe：文件夹 / 定位文件 用 OneCommander 打开 |
+            | `DesktopFileWidget-OneCommander-*-setup.exe` | OneCommander 特供版安装包 |
+
+            - 基于 Tauri 重写，体积从 100+ MB 降到几 MB（使用系统自带的 WebView2，Win10/11 已内置）。
+            - 未签名，首次运行若出现 SmartScreen 提示，点「更多信息 → 仍要运行」。
+            - 特供版会自动查找 OneCommander.exe；找不到时会提示你手动选择，也可在右上角「⋯」菜单里设置路径。
+          files: release/*

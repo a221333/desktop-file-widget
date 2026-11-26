@@ -57,8 +57,8 @@ html, body {
   font-weight: 700;
   letter-spacing: .5px;
 }
-.drag { -webkit-app-region: drag; }
-.actions { display: flex; gap: 6px; -webkit-app-region: no-drag; }
+.actions { display: flex; gap: 6px; }
+.card-header, .hint { cursor: default; }
 
 .btn {
   border: none;
@@ -110,6 +110,7 @@ html, body {
 }
 .tile:hover { background: var(--tile-hover); }
 .tile.dragging { opacity: .35; }
+.tile.selected { background: var(--tile-hover); outline: 1.5px solid rgba(47,124,246,.55); }
 .tile.drop-before::before,
 .tile.drop-after::after {
   content: ""; position: absolute; top: 8px; bottom: 8px; width: 3px;
@@ -186,3 +187,43 @@ html, body {
   pointer-events: none;
 }
 #fav-card.drag-over .drop-overlay { display: flex; }
+
+/* 拖拽时跟随鼠标的影子 */
+.ghost {
+  position: fixed; z-index: 50; pointer-events: none;
+  width: 190px; opacity: .9; transform: rotate(2deg);
+  background: rgba(255,255,255,.85); box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+#fav-card.drop-target { outline: 2px dashed #2f7cf6; outline-offset: -2px; }
+
+/* 右键菜单 */
+.menu {
+  position: fixed; z-index: 100; min-width: 168px; padding: 5px;
+  background: rgba(250, 251, 254, .97); border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(10, 25, 60, .28);
+  font-size: 12.5px;
+}
+.menu .mi {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 6px; cursor: default; white-space: nowrap;
+}
+.menu .mi:hover { background: rgba(47,124,246,.12); }
+.menu .mi.disabled { opacity: .45; pointer-events: none; }
+.menu .mi .ck { width: 14px; text-align: center; color: #2f7cf6; font-weight: 700; }
+.menu .mi .sub { margin-left: auto; color: #8090a8; font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.menu .sep { height: 1px; margin: 4px 6px; background: rgba(0,0,0,.08); }
+.menu .title { padding: 4px 10px 2px; font-size: 11px; color: #8090a8; }
+
+/* 提示条 */
+.toast {
+  position: fixed; z-index: 90; left: 22px; right: 22px; bottom: 22px;
+  padding: 10px 12px; border-radius: 12px;
+  background: rgba(20, 30, 50, .92); color: #fff; font-size: 12.5px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.toast .row { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+.toast button {
+  border: none; border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,.18); color: #fff;
+}
+.toast button.primary { background: #2f7cf6; }

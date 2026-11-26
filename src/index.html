@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'" />
   <title>桌面文件小组件</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -10,8 +9,8 @@
   <main class="widget">
     <!-- 最近打开的文件 -->
     <section class="card" id="recent-card">
-      <header class="card-header drag">
-        <h2>最近打开的文件</h2>
+      <header class="card-header" data-tauri-drag-region>
+        <h2 data-tauri-drag-region>最近打开的文件</h2>
         <div class="actions">
           <button class="btn" id="btn-refresh" title="刷新">刷新</button>
           <button class="btn icon" id="btn-menu" title="设置">⋯</button>
@@ -21,13 +20,13 @@
         <div class="grid" id="recent-list"></div>
         <div class="empty hidden" id="recent-empty">暂无最近打开的文件</div>
       </div>
-      <footer class="hint">双击打开 / 右键可收藏置顶 / 取消收藏 / 定位文件</footer>
+      <footer class="hint" data-tauri-drag-region>双击打开 / 右键可收藏置顶 / 取消收藏 / 定位文件</footer>
     </section>
 
     <!-- 常用文件与文件夹 -->
     <section class="card" id="fav-card">
-      <header class="card-header drag">
-        <h2>常用文件与文件夹</h2>
+      <header class="card-header" data-tauri-drag-region>
+        <h2 data-tauri-drag-region>常用文件与文件夹</h2>
         <div class="actions">
           <button class="btn" id="btn-add" title="添加文件或文件夹">添加</button>
         </div>
@@ -36,10 +35,13 @@
         <div class="grid" id="fav-list"></div>
         <div class="dropzone" id="fav-empty">可将文件/文件夹拖放到此处收藏</div>
       </div>
-      <footer class="hint">文件可直接拖入此卡片，拖拽可自由排序</footer>
+      <footer class="hint" data-tauri-drag-region>文件可直接拖入此卡片，拖拽可自由排序</footer>
       <div class="drop-overlay" id="drop-overlay">松开鼠标即可收藏</div>
     </section>
   </main>
+
+  <div class="menu hidden" id="menu"></div>
+  <div class="toast hidden" id="toast"></div>
 
   <script src="app.js"></script>
 </body>

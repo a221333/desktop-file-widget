@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "桌面文件小组件OC版",
+  "identifier": "com.a221333.desktopfilewidget.oc",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "桌面文件小组件（OneCommander 版）",
+        "width": 470,
+        "height": 660,
+        "minWidth": 340,
+        "minHeight": 420,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "resizable": true,
+        "visible": false,
+        "dragDropEnabled": true
+      }
+    ]
+  }
+}
