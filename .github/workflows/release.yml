@@ -33,7 +33,7 @@ jobs:
           name: 桌面文件小组件 ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
           body: |
             - **DesktopFileWidget-*-portable.exe**：便携版，下载后双击运行（推荐）
-            - **桌面文件小组件 Setup *.exe**：安装版，带开始菜单/桌面快捷方式
+            - **DesktopFileWidget-*-setup.exe**：安装版，带开始菜单/桌面快捷方式
             - **\*-win.zip**：免安装压缩包，解压后运行 `桌面文件小组件.exe`
 
             > 未签名，首次运行若出现 SmartScreen 提示，点「更多信息 → 仍要运行」。

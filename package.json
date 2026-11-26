@@ -34,10 +34,15 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "桌面文件小组件"
+      "shortcutName": "桌面文件小组件",
+      "artifactName": "DesktopFileWidget-${version}-setup.exe"
     },
     "portable": {
       "artifactName": "DesktopFileWidget-${version}-portable.exe"
-    }
+    },
+    "zip": {
+      "artifactName": "DesktopFileWidget-${version}-win.zip"
+    },
+    "artifactName": "DesktopFileWidget-${version}-win.${ext}"
   }
 }
