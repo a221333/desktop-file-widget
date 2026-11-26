@@ -207,6 +207,7 @@ function showAppMenu(x, y) {
   items.push('-',
     { label: '恢复已移除的最近文件', disabled: !s.hiddenCount, sub: s.hiddenCount ? `${s.hiddenCount} 项` : '', action: () => invoke('restore_hidden') },
     { label: '重置窗口位置', action: () => invoke('reset_position') },
+    { label: '检查更新', action: () => checkUpdate(true) },
     { label: '隐藏到托盘', action: () => invoke('hide_window') },
     { label: '退出', action: () => invoke('quit') },
     { title: `版本 ${s.version || ''}${s.ocBuild ? ' · OneCommander 版' : ''}` });
@@ -466,3 +467,38 @@ listen('settings-changed', loadSettings);
 loadSettings();
 loadRecent();
 loadFavorites();
+
+// ---------------------------------------------------------------------------
+// 检查更新：读 GitHub 最新 Release，有新版本就用浏览器下载对应的安装包 / 便携版
+// ---------------------------------------------------------------------------
+const REPO = 'a221333/desktop-file-widget';
+const newer = (a, b) => {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+};
+async function checkUpdate(manual = false) {
+  try {
+    if (!settings.version) await loadSettings();
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rel = await res.json();
+    const latest = String(rel.tag_name || '').replace(/^v/, '');
+    if (!latest || !newer(latest, settings.version)) {
+      if (manual) toast(`已是最新版本（${settings.version}）`);
+      return;
+    }
+    if (!manual && localStorage.getItem('skipVersion') === latest) return;
+    const name = `DesktopFileWidget-${settings.ocBuild ? 'OneCommander-' : ''}${latest}-${settings.installed ? 'setup' : 'portable'}.exe`;
+    const asset = (rel.assets || []).find((a) => a.name === name);
+    const url = asset ? asset.browser_download_url : rel.html_url;
+    toast(`发现新版本 ${latest}${settings.installed ? '，下载后运行安装包即可覆盖升级，设置会保留' : '，下载后替换当前 exe 即可'}`, [
+      { label: '下载', primary: true, action: () => invoke('open_url', { url }).catch((e) => toast(String(e))) },
+      { label: '查看更新内容', action: () => invoke('open_url', { url: rel.html_url }) },
+      { label: '跳过此版本', action: () => localStorage.setItem('skipVersion', latest) },
+    ]);
+  } catch (e) {
+    if (manual) toast(`检查更新失败：${e.message || e}`);
+  }
+}
+setTimeout(() => checkUpdate(false), 8000);

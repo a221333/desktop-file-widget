@@ -38,7 +38,7 @@ Windows hides your recent files behind Explorer's *Quick access* or each app's o
 - **📝 Tracks files opened in OneCommander (OC edition):** OneCommander doesn't write to the Windows *Recent* list, so the OC edition watches the apps it starts and adds the files they open to *Recent files*. You can turn this off in the **⋯** menu.
 - **🎨 Looks at home on Windows 11:** frameless translucent cards, three opacity levels, and Chinese-friendly *middle* ellipsis for long file names (`2026春营...台账.xlsx`).
 - **🧩 Stays out of the way:** no taskbar button, lives in the tray, remembers its position and size, with optional always-on-top and start-with-Windows.
-- **🔒 Private by design:** works fully offline with no telemetry. Settings are a single local JSON file.
+- **🔒 Private by design:** no telemetry; the only network request is a version check against GitHub Releases. Settings are a single local JSON file.
 
 ### 📦 Download
 
@@ -53,6 +53,8 @@ Get the latest version from **[Releases](https://github.com/a221333/desktop-file
 
 > Requires Windows 10/11 with WebView2 (already built into Windows 11 and up-to-date Windows 10).
 > The binaries are not code-signed. If SmartScreen appears, click **More info → Run anyway**.
+
+**Updating:** the widget checks for new versions on startup (or via **⋯ → 检查更新 (Check for updates)**) and downloads the right file for your edition. Running a newer installer upgrades the existing install in place; your favorites and settings are kept. The standard and OneCommander editions install separately and can coexist.
 
 ### 🖱️ Usage
 
@@ -96,7 +98,7 @@ Windows 的"最近文件"藏在资源管理器的「快速访问」或各个软�
 - **📝 记录 OneCommander 中打开的文件（特供版）**：OneCommander 打开文件时不会写入系统「最近」列表，特供版会监测由它启动的程序，把打开的文件加入「最近打开的文件」。可在 **⋯** 菜单中关闭。
 - **🎨 和 Windows 11 风格一致**：无边框半透明卡片，背景不透明度有三档可调；长文件名在中间省略，开头和扩展名都看得到（`2026春营...台账.xlsx`）。
 - **🧩 不打扰**：不占任务栏，常驻托盘；记住窗口位置和大小；可以设置始终置顶和开机自启。
-- **🔒 注重隐私**：完全离线运行，不收集任何数据，所有设置只保存在本地一个 JSON 文件里。
+- **🔒 注重隐私**：不收集任何数据，唯一的联网操作是向 GitHub 查询是否有新版本，所有设置只保存在本地一个 JSON 文件里。
 
 ### 📦 下载
 
@@ -111,6 +113,8 @@ Windows 的"最近文件"藏在资源管理器的「快速访问」或各个软�
 
 > 需要 Windows 10/11 和 WebView2（Win11 和保持更新的 Win10 已经自带）。
 > 程序没有数字签名，第一次运行如果弹出 SmartScreen 提示，点「更多信息 → 仍要运行」。
+
+**更新方法：** 小组件启动时会自动检查新版本（也可以点 **⋯ → 检查更新**），并下载与你当前版本对应的文件。安装版直接运行新的安装包即可覆盖升级，常用列表和设置都会保留；便携版用新 exe 替换旧的即可。普通版和特供版分别安装，可以共存。
 
 ### 🖱️ 使用方法
 

@@ -381,6 +381,15 @@ struct Settings {
     track_one_commander: bool,
     oc_path: Option<String>,
     version: String,
+    installed: bool,
+}
+
+/// 安装版的 exe 旁边有 NSIS 生成的 uninstall.exe；便携版没有
+fn is_installed() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("uninstall.exe").is_file()))
+        .unwrap_or(false)
 }
 
 #[tauri::command]
@@ -397,7 +406,17 @@ fn get_settings(app: AppHandle, state: St) -> Settings {
         track_one_commander: c.track_one_commander,
         oc_path: c.oc_path.clone(),
         version: app.package_info().version.to_string(),
+        installed: is_installed(),
     }
+}
+
+/// 用默认浏览器打开更新链接（只允许本项目的 GitHub 地址）
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://github.com/a221333/desktop-file-widget/") {
+        return Err("不允许的链接".into());
+    }
+    tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -877,6 +896,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_settings,
+            open_url,
             set_setting,
             get_recent,
             get_favorites,

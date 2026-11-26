@@ -1,6 +1,6 @@
 [package]
 name = "desktop-file-widget"
-version = "1.2.0"
+version = "1.3.0"
 description = "桌面文件小组件：最近打开的文件 + 常用文件与文件夹"
 authors = ["a221333"]
 edition = "2021"
