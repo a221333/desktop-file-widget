@@ -1,0 +1,44 @@
+{
+  "name": "desktop-file-widget",
+  "version": "1.0.0",
+  "description": "桌面小组件：最近打开的文件 + 常用文件与文件夹",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable nsis --x64",
+    "dist:zip": "electron-builder --win zip --x64"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "productName": "桌面文件小组件",
+  "author": "a221333",
+  "license": "MIT",
+  "build": {
+    "appId": "com.desktop.file-widget",
+    "productName": "桌面文件小组件",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**",
+      "assets/**"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "桌面文件小组件"
+    },
+    "portable": {
+      "artifactName": "DesktopFileWidget-${version}-portable.exe"
+    }
+  }
+}
