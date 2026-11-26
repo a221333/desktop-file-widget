@@ -29,8 +29,7 @@
       "target": [
         "portable",
         "nsis"
-      ],
-      "signAndEditExecutable": false
+      ]
     },
     "nsis": {
       "oneClick": false,
