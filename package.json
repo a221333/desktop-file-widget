@@ -40,9 +40,6 @@
     "portable": {
       "artifactName": "DesktopFileWidget-${version}-portable.exe"
     },
-    "zip": {
-      "artifactName": "DesktopFileWidget-${version}-win.zip"
-    },
     "artifactName": "DesktopFileWidget-${version}-win.${ext}"
   }
 }
