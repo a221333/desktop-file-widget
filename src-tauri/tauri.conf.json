@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "桌面文件小组件",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "identifier": "com.a221333.desktopfilewidget",
   "build": {
     "frontendDist": "../src"

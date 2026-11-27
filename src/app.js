@@ -18,9 +18,16 @@ function fmtTime(ms) {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// 按显示宽度做“中间省略”：2026春营养...台账.xlsx
+// 按显示宽度做“中间省略”：保留开头、结尾和扩展名
 const charW = (c) => (/[\u2e80-\uffff]/.test(c) ? 2 : 1);
-function middleEllipsis(name, maxW = 22) {
+function nameBudget() {
+  const gw = recentList.clientWidth || favList.clientWidth || 410;
+  const cols = settings.singleColumn ? 1 : Math.max(1, Math.floor((gw + 8) / 178));
+  const tileW = (gw - (cols - 1) * 8) / cols;
+  const textW = Math.max(90, tileW - 56);
+  return Math.max(24, Math.floor(textW / 6.8) * 2);
+}
+function middleEllipsis(name, maxW = nameBudget()) {
   const chars = Array.from(name);
   const width = chars.reduce((s, c) => s + charW(c), 0);
   if (width <= maxW) return name;
@@ -28,12 +35,52 @@ function middleEllipsis(name, maxW = 22) {
   const ext = dot > 0 && name.length - dot <= 6 ? name.slice(dot) : '';
   const base = Array.from(ext ? name.slice(0, dot) : name);
   const budget = maxW - ext.length - 3;
+  if (budget < 6) return chars.slice(0, Math.max(4, Math.floor(maxW / 2) - 2)).join('') + '...' + ext;
   const headW = Math.ceil(budget * 0.6), tailW = budget - headW;
   let head = '', w = 0;
   for (const c of base) { if (w + charW(c) > headW) break; head += c; w += charW(c); }
   let tail = ''; w = 0;
   for (let i = base.length - 1; i >= 0; i--) { if (w + charW(base[i]) > tailW) break; tail = base[i] + tail; w += charW(base[i]); }
   return `${head}...${tail}${ext}`;
+}
+function refreshNames() {
+  const maxW = nameBudget();
+  for (const tile of document.querySelectorAll('.tile')) {
+    const raw = tile.dataset.rawName;
+    const nameEl = tile.querySelector('.name');
+    if (raw && nameEl && !tile.querySelector('input.rename')) {
+      nameEl.textContent = middleEllipsis(raw, maxW);
+    }
+  }
+}
+
+// 悬停完整文件名提示
+const tipEl = $('#tip');
+let tipTimer = null;
+function hideTip() {
+  clearTimeout(tipTimer);
+  tipEl.classList.add('hidden');
+}
+function scheduleTip(tile, item) {
+  hideTip();
+  tipTimer = setTimeout(() => {
+    if (drag) return;
+    tipEl.replaceChildren();
+    const n = document.createElement('div');
+    n.className = 'tip-name';
+    n.textContent = item.name;
+    const p = document.createElement('div');
+    p.className = 'tip-path';
+    p.textContent = item.path;
+    tipEl.append(n, p);
+    tipEl.classList.remove('hidden');
+    const r = tile.getBoundingClientRect();
+    const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+    const x = Math.max(8, Math.min(r.left, window.innerWidth - tw - 8));
+    const y = r.bottom + 6 + th <= window.innerHeight - 6 ? r.bottom + 6 : Math.max(8, r.top - th - 6);
+    tipEl.style.left = `${x}px`;
+    tipEl.style.top = `${y}px`;
+  }, 180);
 }
 
 // 系统图标获取失败时的彩色兜底图标
@@ -74,10 +121,13 @@ async function setIcon(el, item) {
 function makeTile(item, title, sub) {
   const tile = document.createElement('div');
   tile.className = 'tile';
-  tile.title = item.path;
+  tile.dataset.rawName = item.name;
   tile.innerHTML = '<div class="ico"></div><div class="meta"><div class="name"></div><div class="sub"></div></div>';
   tile.querySelector('.name').textContent = title;
   tile.querySelector('.sub').textContent = sub;
+  tile.addEventListener('mouseenter', () => scheduleTip(tile, item));
+  tile.addEventListener('mouseleave', hideTip);
+  tile.addEventListener('mousedown', hideTip);
   setIcon(tile.querySelector('.ico'), item);
   return tile;
 }
@@ -157,6 +207,7 @@ const useOC = () => settings.ocBuild && settings.useOneCommander;
 // ---------------------------------------------------------------------------
 const menuEl = $('#menu');
 function showMenu(x, y, items) {
+  hideTip();
   menuEl.replaceChildren();
   for (const it of items) {
     if (it === '-') { menuEl.appendChild(Object.assign(document.createElement('div'), { className: 'sep' })); continue; }
@@ -180,8 +231,8 @@ function showMenu(x, y, items) {
 }
 function hideMenu() { menuEl.classList.add('hidden'); }
 document.addEventListener('pointerdown', (e) => { if (!menuEl.contains(e.target)) hideMenu(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideMenu(); });
-window.addEventListener('blur', hideMenu);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideMenu(); hideTip(); } });
+window.addEventListener('blur', () => { hideMenu(); hideTip(); });
 document.addEventListener('contextmenu', (e) => e.preventDefault()); // 屏蔽浏览器默认菜单
 
 const setSetting = (key, value) => invoke('set_setting', { key, value }).catch((e) => toast(String(e)));
@@ -197,6 +248,7 @@ function showAppMenu(x, y) {
     { label: '始终置顶', checked: s.alwaysOnTop, action: () => setSetting('alwaysOnTop', !s.alwaysOnTop) },
     { label: '开机自启', checked: s.autoStart, action: () => setSetting('autoStart', !s.autoStart) },
     { label: '最近列表包含文件夹', checked: s.includeFolders, action: () => setSetting('includeFolders', !s.includeFolders) },
+    { label: '单列显示（显示更长文件名）', checked: s.singleColumn, action: () => setSetting('singleColumn', !s.singleColumn) },
   ];
   if (s.ocBuild) {
     items.push('-',
@@ -438,7 +490,17 @@ async function loadSettings() {
   settings = await invoke('get_settings');
   document.body.classList.remove('opacity-low', 'opacity-medium', 'opacity-high');
   document.body.classList.add(`opacity-${settings.opacity || 'medium'}`);
+  document.body.classList.toggle('single-column', !!settings.singleColumn);
+  refreshNames();
 }
+for (const body of document.querySelectorAll('.card-body')) {
+  body.addEventListener('scroll', hideTip, { passive: true });
+}
+let resizeRaf = 0;
+new ResizeObserver(() => {
+  cancelAnimationFrame(resizeRaf);
+  resizeRaf = requestAnimationFrame(refreshNames);
+}).observe(recentList);
 
 $('#btn-refresh').addEventListener('click', loadRecent);
 $('#btn-add').addEventListener('click', (e) => {

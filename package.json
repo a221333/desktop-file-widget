@@ -1,7 +1,7 @@
 {
   "name": "desktop-file-widget",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "桌面文件小组件：最近打开的文件 + 常用文件与文件夹",
   "license": "MIT",
   "scripts": {

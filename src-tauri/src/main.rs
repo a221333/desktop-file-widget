@@ -55,6 +55,7 @@ struct Config {
     opacity: String,
     max_recent: usize,
     include_folders: bool,
+    single_column: bool,
     use_one_commander: bool,
     oc_path: Option<String>,
     /// 记录从 OneCommander 打开的文件（OneCommander 不会写入系统“最近”）
@@ -73,6 +74,7 @@ impl Default for Config {
             opacity: "medium".into(),
             max_recent: 40,
             include_folders: false,
+            single_column: false,
             use_one_commander: IS_OC_BUILD,
             oc_path: None,
             track_one_commander: IS_OC_BUILD,
@@ -375,6 +377,7 @@ struct Settings {
     always_on_top: bool,
     auto_start: bool,
     include_folders: bool,
+    single_column: bool,
     hidden_count: usize,
     oc_build: bool,
     use_one_commander: bool,
@@ -400,6 +403,7 @@ fn get_settings(app: AppHandle, state: St) -> Settings {
         always_on_top: c.always_on_top,
         auto_start: app.autolaunch().is_enabled().unwrap_or(false),
         include_folders: c.include_folders,
+        single_column: c.single_column,
         hidden_count: c.hidden.len(),
         oc_build: IS_OC_BUILD,
         use_one_commander: c.use_one_commander,
@@ -432,6 +436,7 @@ fn set_setting(app: AppHandle, state: St, key: String, value: Value) -> Result<(
                 }
             }
             "includeFolders" => c.include_folders = value.as_bool().unwrap_or(false),
+            "singleColumn" => c.single_column = value.as_bool().unwrap_or(false),
             "useOneCommander" => c.use_one_commander = value.as_bool().unwrap_or(false),
             "trackOneCommander" => c.track_one_commander = value.as_bool().unwrap_or(false),
             "ocPath" => c.oc_path = value.as_str().filter(|s| !s.is_empty()).map(String::from),
